@@ -1,0 +1,195 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  password      String
+  role          String @default("STAFF")
+  hostelId      String?
+  hostel        Hostel?        @relation(fields: [hostelId], references: [id])
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  notifications Notification[]
+  auditLogs     AuditLog[]
+}
+
+model Hostel {
+  id        String   @id @default(cuid())
+  name      String
+  address   String
+  phone     String?
+  email     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  blocks    Block[]
+  users     User[]
+}
+
+model Block {
+  id        String   @id @default(cuid())
+  name      String
+  hostelId  String
+  hostel    Hostel   @relation(fields: [hostelId], references: [id])
+  floors    Floor[]
+  createdAt DateTime @default(now())
+}
+
+model Floor {
+  id        String   @id @default(cuid())
+  number    Int
+  blockId   String
+  block     Block    @relation(fields: [blockId], references: [id])
+  rooms     Room[]
+  createdAt DateTime @default(now())
+}
+
+model Room {
+  id           String   @id @default(cuid())
+  roomNumber   String
+  floorId      String
+  floor        Floor    @relation(fields: [floorId], references: [id])
+  roomType     String @default("DOUBLE")
+  totalBeds    Int      @default(2)
+  monthlyRent  Float
+  meterNumber  String?
+  notes        String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  beds         Bed[]
+  ebBills      EbBill[]
+}
+
+model Bed {
+  id         String   @id @default(cuid())
+  bedNumber  Int
+  roomId     String
+  room       Room     @relation(fields: [roomId], references: [id])
+  isOccupied Boolean  @default(false)
+  tenants    Tenant[]
+  createdAt  DateTime @default(now())
+}
+
+model Tenant {
+  id              String       @id @default(cuid())
+  name            String
+  phone           String
+  whatsappNumber  String?
+  email           String?
+  aadhaarNumber   String?
+  occupation      String?
+  guardianName    String?
+  guardianPhone   String?
+  joiningDate     DateTime
+  vacateDate      DateTime?
+  noticeDate      DateTime?
+  securityDeposit Float        @default(0)
+  advanceBalance  Float        @default(0)
+  rentAmount      Float
+  bedId           String
+  bed             Bed          @relation(fields: [bedId], references: [id])
+  status          String @default("ACTIVE")
+  photoUrl        String?
+  aadhaarUrl      String?
+  agreementUrl    String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  payments        Payment[]
+  complaints      Complaint[]
+  notifications   Notification[]
+  ebSplits        EbSplit[]
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  tenantId      String
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  amount        Float
+  dueAmount     Float         @default(0)
+  month         Int
+  year          Int
+  dueDate       DateTime
+  paidDate      DateTime?
+  status        String @default("UNPAID")
+  method        String?
+  transactionId String?
+  receiptUrl    String?
+  penalty       Float         @default(0)
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model EbBill {
+  id              String    @id @default(cuid())
+  roomId          String
+  room            Room      @relation(fields: [roomId], references: [id])
+  previousReading Float
+  currentReading  Float
+  unitsConsumed   Float
+  costPerUnit     Float     @default(7.0)
+  totalBill       Float
+  billingMonth    Int
+  billingYear     Int
+  billDate        DateTime  @default(now())
+  splits          EbSplit[]
+  createdAt       DateTime  @default(now())
+}
+
+model EbSplit {
+  id       String @id @default(cuid())
+  ebBillId String
+  ebBill   EbBill @relation(fields: [ebBillId], references: [id])
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+  amount   Float
+  isPaid   Boolean @default(false)
+}
+
+model Complaint {
+  id          String            @id @default(cuid())
+  tenantId    String
+  tenant      Tenant            @relation(fields: [tenantId], references: [id])
+  category    String @default("OTHERS")
+  title       String
+  description String
+  status      String @default("OPEN")
+  imageUrl    String?
+  resolvedAt  DateTime?
+  notes       String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  tenantId  String?
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id])
+  title     String
+  message   String
+  type      String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String
+  details   String?
+  createdAt DateTime @default(now())
+}
